@@ -1,0 +1,10 @@
+[state]
+    dir = /scratch/mahajnal/data/dvc-tmp
+[index]
+    dir = /scratch/mahajnal/data/dvc-tmp/index
+[cache]
+    type = "hardlink,copy"
+[core]
+    remote = localremote
+['remote "localremote"']
+    url = /home/mahajnal/science/projects/csnl/storage/localremote-dvc-mouse-video-public

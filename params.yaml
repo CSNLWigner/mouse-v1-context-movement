@@ -1,0 +1,38 @@
+rawvideorootpath: ""
+rawbehaviourrootpath: ""
+videofileextension: ".avi"
+
+maxpc: 40
+reconstructpc: 14
+
+downsample: 5
+
+chunksize: 3000
+chunkdim: 200
+
+backgroundrate: 0.3
+diffimagerate: 0.9
+
+kernelhalfwidth: 4
+motionthresholds: [0.1, 0.2,  0.3,  0.4,  0.5,  0.6,  0.7,  0.8,  0.9,  1.0,  1.1,  1.2,  1.3,  1.4,  1.5,  1.6,  1.7,  1.8,  1.9,  2.0]
+proportiontrialmotionthresholds: [0.05, 0.1, 0.2, 0.3, 0.5]
+
+# exportframestart: 6848      # three consecutive go trials for maxmimum movement
+# exportframeduration: 14 #330
+# exportframestart: 17150      # three consecutive go trials for maximum movement. 10565 - 5330 + 11900
+# exportframeduration: 330
+exportframestart: 9501      # longer video encompassing the end of the first and start of the second multimodal block      
+exportframeduration: 4800
+
+
+exportoverlayframe: 6890
+
+
+
+videos:
+  MT020_2a-10082021191715-0000: {mouseid: MT020_2, blocknum: 1, crop: [516,1914,221,795], framestart: 4908, frameduration: 11900, rhdstart: "18:46:29"}
+  MT020_2a-10082021193209-0000: {mouseid: MT020_2, blocknum: 2, crop: [516,1914,221,795], framestart: 5330, frameduration: 10800, rhdstart: "18:46:29"}
+
+
+sessions:
+  MT020_2: {videos: [MT020_2a-10082021191715-0000, MT020_2a-10082021193209-0000]}

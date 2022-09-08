@@ -1,0 +1,99 @@
+stages:
+
+
+  
+  cachecodec:
+    foreach: ${videos}
+    do:
+      cmd: julia -t auto --project=. src/reducevideo.jl cachecodec ${item.mouseid} ${key}
+      deps:
+        - ${item.mouseid}/${key}.avi
+        - ${item.mouseid}/${key}-synchronizedtimestamps.csv
+      outs:
+        - ${item.mouseid}/pca/${key}-cropped-raw.dat: {persist: true}
+
+
+
+  pca:
+    foreach: ${sessions}
+    do:
+      cmd: julia -t auto --project=. src/reducevideo.jl pca ${key}
+      deps:
+        - ${key}/pca/${item.videos[0]}-cropped-raw.dat
+        - ${key}/pca/${item.videos[1]}-cropped-raw.dat
+      params:
+        - maxpc
+        - chunksize
+        - chunkdim
+        - backgroundrate
+        - diffimagerate
+      outs:
+        - ${key}/pca/${key}-pc-latent.dat: {persist: true}
+        - ${key}/pca/${key}-pc-latent.csv: {persist: true}
+
+
+
+
+
+
+  display:
+    foreach: ${sessions}
+    do:
+      cmd: julia -t auto --project=. src/reducevideo.jl display ${key}
+      deps:
+        - ${key}/pca/${key}-pc-latent.dat
+      outs:
+        - ${key}/pca/${key}-pc-latent-short.png: {persist: true}
+        - ${key}/pca/${key}-pc-latent-long.png: {persist: true}
+
+
+
+
+  threshold:
+    foreach: ${sessions}
+    do:
+      cmd:
+        - julia -t auto --project=. src/reducevideo.jl threshold ${key}
+        - cp ${key}/pca/${key}-pc-latent-motionenergy,threshold.csv ${rawbehaviourrootpath}/${key}/${key}-motionenergy,threshold.csv
+        - chmod u+w ${rawbehaviourrootpath}/${key}/${key}-motionenergy,threshold.csv
+      deps:
+        - ${key}/pca/${key}-pc-latent.dat
+      params:
+        - kernelhalfwidth
+        - motionthresholds
+        - proportiontrialmotionthresholds
+      outs:
+        - ${key}/pca/${key}-pc-latent-motionenergy,threshold.csv: {persist: true}
+        - ${key}/pca/${key}-pc-latent-motionenergy,threshold.png: {persist: true}
+        - ${key}/pca/${key}-motionenergy,threshold-view.avi: {persist: true}
+
+
+
+
+
+
+  reconstruct:
+    foreach: ${sessions}
+    do:
+      cmd: julia -t auto --project=. src/reducevideo.jl reconstruct ${key}
+      deps:
+        - ${key}/pca/${item.videos[0]}-cropped-raw.dat
+        - ${key}/pca/${item.videos[1]}-cropped-raw.dat
+        - ${key}/pca/${key}-pc-latent.dat
+      params:
+        - maxpc
+        - reconstructpc
+        - downsample
+        - chunksize
+        - chunkdim
+        - backgroundrate
+        - diffimagerate
+        - exportframestart
+        - exportframeduration
+      outs:
+        - ${key}/pca/${key}-pc-reconstruction.avi: {persist: true}
+
+
+
+
+
