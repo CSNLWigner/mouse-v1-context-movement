@@ -1,55 +1,5 @@
 schema: '2.0'
 stages:
-  alignvideo@MT010_2a-10222021173333-0000:
-    cmd: julia -t auto --project=. src/reducevideo.jl align MT010_2 MT010_2a-10222021173333-0000
-    deps:
-    - path: MT010_2/MT010_2a-10222021173333-0000.avi
-      md5: d5516b1cd45b3cb6c58cc2ed9fa0e7c8
-      size: 2676413584
-    outs:
-    - path: MT010_2/MT010_2a-10222021173333-0000-synchronizedtimestamps.csv
-      md5: c15b60cfac3cd62b936b5113372f99a6
-      size: 379486
-  alignvideo@MT020_2b-10082021191716-0000:
-    cmd: julia -t auto --project=. src/reducevideo.jl align MT020_2 MT020_2b-10082021191716-0000
-    deps:
-    - path: MT020_2/MT020_2b-10082021191716-0000.avi
-      md5: a561b9da4c9f5318711180f18ae4d907
-      size: 2376167628
-    outs:
-    - path: MT020_2/MT020_2b-10082021191716-0000-synchronizedtimestamps.csv
-      md5: eb8657dd512609663b8e7c4c8effd9a2
-      size: 409922
-  alignvideo@MT020_2b-10082021193211-0000:
-    cmd: julia -t auto --project=. src/reducevideo.jl align MT020_2 MT020_2b-10082021193211-0000
-    deps:
-    - path: MT020_2/MT020_2b-10082021193211-0000.avi
-      md5: e7e767d6cef1c8c18811a142495517e3
-      size: 2294993252
-    outs:
-    - path: MT020_2/MT020_2b-10082021193211-0000-synchronizedtimestamps.csv
-      md5: 83d745f9519d7599b3659174fdc2b50a
-      size: 395735
-  alignvideo@MT020_2a-10082021193209-0000:
-    cmd: julia -t auto --project=. src/reducevideo.jl align MT020_2 MT020_2a-10082021193209-0000
-    deps:
-    - path: MT020_2/MT020_2a-10082021193209-0000.avi
-      md5: bf4a4f0e4874a21e41405d6f4c1d8589
-      size: 3026303432
-    outs:
-    - path: MT020_2/MT020_2a-10082021193209-0000-synchronizedtimestamps.csv
-      md5: deece6d9f9ee232137cdd4a235b2972c
-      size: 396192
-  alignvideo@MT020_2a-10082021191715-0000:
-    cmd: julia -t auto --project=. src/reducevideo.jl align MT020_2 MT020_2a-10082021191715-0000
-    deps:
-    - path: MT020_2/MT020_2a-10082021191715-0000.avi
-      md5: aba99c323c89a61f1020a2b7341b1c60
-      size: 3081868644
-    outs:
-    - path: MT020_2/MT020_2a-10082021191715-0000-synchronizedtimestamps.csv
-      md5: 1916014bf414f6067fb581a1414ca5e1
-      size: 409908
   cachecodec@MT020_2a-10082021191715-0000:
     cmd: julia -t auto --project=. src/reducevideo.jl cachecodec MT020_2 MT020_2a-10082021191715-0000
     deps:
@@ -199,23 +149,3 @@ stages:
     - path: MT020_2/pca/MT020_2-pc-latent-motionenergy,threshold.png
       md5: 6bede1d6466ff8b2d2799d6a3a099f3f
       size: 298271
-  copytimestamps@MT020_2a-10082021193209-0000:
-    cmd: cp MT020_2/MT020_2b-10082021193211-0000-synchronizedtimestamps.csv MT020_2/MT020_2a-10082021193209-0000-synchronizedtimestamps.csv
-    deps:
-    - path: MT020_2/MT020_2b-10082021193211-0000-synchronizedtimestamps.csv
-      md5: 83d745f9519d7599b3659174fdc2b50a
-      size: 395735
-    outs:
-    - path: MT020_2/MT020_2a-10082021193209-0000-synchronizedtimestamps.csv
-      md5: 83d745f9519d7599b3659174fdc2b50a
-      size: 395735
-  copytimestamps@MT020_2a-10082021191715-0000:
-    cmd: cp MT020_2/MT020_2b-10082021191716-0000-synchronizedtimestamps.csv MT020_2/MT020_2a-10082021191715-0000-synchronizedtimestamps.csv
-    deps:
-    - path: MT020_2/MT020_2b-10082021191716-0000-synchronizedtimestamps.csv
-      md5: eb8657dd512609663b8e7c4c8effd9a2
-      size: 409922
-    outs:
-    - path: MT020_2/MT020_2a-10082021191715-0000-synchronizedtimestamps.csv
-      md5: eb8657dd512609663b8e7c4c8effd9a2
-      size: 409922
