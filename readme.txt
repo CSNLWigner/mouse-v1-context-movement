@@ -13,7 +13,7 @@ in the root folder. Tested with julia 1.6 and 1.7.
 Requires dvc (https://dvc.org) for data install, tested with versions 2.9-2.24.
 
 
-src/ folder contents:
+src/ folder content:
 reducevideo.jl: main file, contains option parsing, and routing to routines
 load.jl: loads raw video files, and encodes them in julia arrays
 pca.jl: calculates the differential frames, and the dimension reducted video stream
@@ -22,21 +22,26 @@ reconstruct.jl: reconstructs the video from the principal components
 
 
 Install data into the local repo:
-1. download the dvc cache zip file (movement-cache,dvc.zip) from the accompanying
-zenodo link: https://zenodo.org/record/5045981/files/movement-cache,dvc.zip
-to the repo root folder
+1. download into the root folder the dvc cache zip file movement-cache,dvc.zip
+from the accompanying zenodo repository (all 5 parts):
+doi://10.5281/zenodo.7065334
+or use wget with files:
+wget https://zenodo.org/record/7065334/files/movement-cache,dvc.{z01,z02,z03,z04,zip}
 2. unzip, it should unzip into .dvc/cache/* folders
 3. populate the data tree MT020_2/ with data from the cache with the command at
 the prompt: dvc checkout
-4. check if everything is up to date, with the command: dvc status.
+4. check if everything is up to date, with the command: dvc status
 
 
 Run the analysis:
-dvc.yaml contains the stages required to produce everything from pca to reconstruction, with the parameters params.yaml.
-To test changes with params.yaml changes, do a full run with the command: dvc repro.
-Individual stages can be run within julia REPL with:
+dvc.yaml contains the stages required to produce everything from pca to reconstruction,
+with the parameters params.yaml.
+To test changes within params.yaml, do a full run with the command: dvc repro,
+or individual stages, e.g.: dvc repro pca.
+Individual stages can be run within julia REPL as well, with:
 args = [command,"MT020_2"]; include("src/reducevideo.jl")
-where command can be inferred from dvc.yaml stages or in reducedvideo.jl, the if-elseif main command tree.
+where command can be inferred from dvc.yaml stages (such as pca)
+or from the if-elseif main command exacution tree in reducevideo.jl.
 
 
 Questions about the code should be addressed to: hajnal.marton@wigner.mta.hu
