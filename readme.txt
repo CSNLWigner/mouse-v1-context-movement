@@ -24,9 +24,9 @@ reconstruct.jl: reconstructs the video from the principal components
 Install data into the local repo:
 1. download into the root folder the dvc cache zip file movement-cache,dvc.zip
 from the accompanying zenodo repository (all 5 parts):
-doi://10.5281/zenodo.7065334
+doi://10.5281/zenodo.7689204
 or use wget with files:
-wget https://zenodo.org/record/7065334/files/movement-cache,dvc.{z01,z02,z03,z04,zip}
+wget https://zenodo.org/record/7689204/files/movement-cache,dvc.{z01,z02,z03,z04,zip}
 2. unzip, it should unzip into .dvc/cache/* folders
 3. populate the data tree MT020_2/ with data from the cache with the command at
 the prompt: dvc checkout

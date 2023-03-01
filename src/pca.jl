@@ -370,7 +370,7 @@ function threshold(Z,timestamps)
 
     display(ax)
     # savefig(ax, joinpath(outputpath,filename*"-pc-latent-motionenergy,threshold.png"))
-    savefig(ax, joinpath("../../publish/journals/journal2020spring/figures/","Supp8-absolutemotion,threshold,proportionallowed.png"))
+    savefig(ax, "Supp7-absolutemotion,threshold,proportionallowed.png")
 
     data = [ ["proportion" motionthresholds']; motiontrials ]
     # @info "data" data
