@@ -44,10 +44,10 @@ stages:
         maxpc: 40
     outs:
     - path: MT020_2/pca/MT020_2-pc-latent.csv
-      md5: 7de83295afb25c7af6d45e9d36b0766f
-      size: 10767632
+      md5: 0cd2d3d7f25ad8907d07fe822082462d
+      size: 10469883
     - path: MT020_2/pca/MT020_2-pc-latent.dat
-      md5: 4e9f93b1b6eed3b4a2c7067dc329b380
+      md5: ced90b4d4f6e7bc4d472a68e56921b84
       size: 5209245868
   exportpca@MT020_2:
     cmd:
@@ -63,7 +63,7 @@ stages:
   reconstruct@MT020_2:
     cmd: julia -t auto --project=. src/reducevideo.jl reconstruct MT020_2
     deps:
-    - path: MT020_2/pca/MT020_2-pc-latent.dat
+    - path: MT020_2/pca/MT020_2-dpc-latent.dat
       md5: 4e9f93b1b6eed3b4a2c7067dc329b380
       size: 5209245868
     - path: MT020_2/pca/MT020_2a-10082021191715-0000-cropped-raw.dat
@@ -84,29 +84,41 @@ stages:
         maxpc: 40
         reconstructpc: 14
     outs:
-    - path: MT020_2/pca/MT020_2-pc-reconstruction.avi
+    - path: MT020_2/pca/MT020_2-dpc-reconstruction.avi
       md5: 741f7283eafb55e82cb7ee944399ccff
       size: 2576033566
+    - path: MT020_2/pca/MT020_2-reconstructionframes-dpcs.csv
+      md5: 0bb8b0593d6bc02bf1e77cb3e7153751
+      size: 2607
   display@MT020_2:
     cmd: julia -t auto --project=. src/reducevideo.jl display MT020_2
     deps:
-    - path: MT020_2/pca/MT020_2-pc-latent.dat
+    - path: MT020_2/pca/MT020_2-dpc-latent.dat
       md5: 4e9f93b1b6eed3b4a2c7067dc329b380
       size: 5209245868
+    - path: MT020_2/pca/MT020_2-pc-latent.dat
+      md5: ced90b4d4f6e7bc4d472a68e56921b84
+      size: 5209245868
     outs:
+    - path: MT020_2/pca/MT020_2-dpc-latent-long.png
+      md5: cb7e3ab716334ab64011297254ae2741
+      size: 893050
+    - path: MT020_2/pca/MT020_2-dpc-latent-short.png
+      md5: 78203c34581924585533a54e8500eeec
+      size: 499888
     - path: MT020_2/pca/MT020_2-pc-latent-long.png
-      md5: 7583bd51d7e86d925935d78963f7752a
-      size: 936036
+      md5: bf75a2eceb87eca3d26203a4b9dc969e
+      size: 1148694
     - path: MT020_2/pca/MT020_2-pc-latent-short.png
-      md5: 338faa5abd6b9af667a8a322cb69cc0d
-      size: 820482
+      md5: cf015933bee5b4ccb49ed9a1d44be47d
+      size: 617631
   threshold@MT020_2:
     cmd:
     - julia -t auto --project=. src/reducevideo.jl threshold MT020_2
     - cp MT020_2/pca/MT020_2-pc-latent-motionenergy,threshold.csv /MT020_2/MT020_2-motionenergy,threshold.csv
     - chmod u+w /MT020_2/MT020_2-motionenergy,threshold.csv
     deps:
-    - path: MT020_2/pca/MT020_2-pc-latent.dat
+    - path: MT020_2/pca/MT020_2-dpc-latent.dat
       md5: 4e9f93b1b6eed3b4a2c7067dc329b380
       size: 5209245868
     params:
@@ -140,12 +152,133 @@ stages:
         - 0.3
         - 0.5
     outs:
+    - path: MT020_2/pca/MT020_2-dpc-latent-motionenergy,levels.csv
+      md5: 4f70095add8aed068d3abede82bac080
+      size: 74
+    - path: MT020_2/pca/MT020_2-dpc-latent-motionenergy,levelstrials.csv
+      md5: cc8dea1b282fd4c77481ff75f9dabee9
+      size: 73554
+    - path: MT020_2/pca/MT020_2-dpc-latent-motionenergy,threshold.csv
+      md5: 7c107b0b2cd3c2d9e13ec9973944252a
+      size: 59031
+    - path: MT020_2/pca/MT020_2-dpc-latent-motionenergy,threshold.png
+      md5: 6bede1d6466ff8b2d2799d6a3a099f3f
+      size: 298271
     - path: MT020_2/pca/MT020_2-motionenergy,threshold-view.avi
       md5: 0f4b26e9ff5b54309d7e5daf51003356
       size: 652198576
-    - path: MT020_2/pca/MT020_2-pc-latent-motionenergy,threshold.csv
-      md5: 7c107b0b2cd3c2d9e13ec9973944252a
-      size: 59031
-    - path: MT020_2/pca/MT020_2-pc-latent-motionenergy,threshold.png
-      md5: 6bede1d6466ff8b2d2799d6a3a099f3f
-      size: 298271
+  copytimestamps@MT020_2a-10082021193209-0000:
+    cmd: cp MT020_2/MT020_2b-10082021193211-0000-synchronizedtimestamps.csv MT020_2/MT020_2a-10082021193209-0000-synchronizedtimestamps.csv
+    deps:
+    - path: MT020_2/MT020_2b-10082021193211-0000-synchronizedtimestamps.csv
+      md5: 83d745f9519d7599b3659174fdc2b50a
+      size: 395735
+    outs:
+    - path: MT020_2/MT020_2a-10082021193209-0000-synchronizedtimestamps.csv
+      md5: 83d745f9519d7599b3659174fdc2b50a
+      size: 395735
+  copytimestamps@MT020_2a-10082021191715-0000:
+    cmd: cp MT020_2/MT020_2b-10082021191716-0000-synchronizedtimestamps.csv MT020_2/MT020_2a-10082021191715-0000-synchronizedtimestamps.csv
+    deps:
+    - path: MT020_2/MT020_2b-10082021191716-0000-synchronizedtimestamps.csv
+      md5: eb8657dd512609663b8e7c4c8effd9a2
+      size: 409922
+    outs:
+    - path: MT020_2/MT020_2a-10082021191715-0000-synchronizedtimestamps.csv
+      md5: eb8657dd512609663b8e7c4c8effd9a2
+      size: 409922
+  dpca@MT020_2:
+    cmd: julia -t auto --project=. src/reducevideo.jl dpca MT020_2
+    deps:
+    - path: MT020_2/pca/MT020_2a-10082021191715-0000-cropped-raw.dat
+      md5: 9974f9bea98211aa9ed89a13ddf71b07
+      size: 9549274136
+    - path: MT020_2/pca/MT020_2a-10082021193209-0000-cropped-raw.dat
+      md5: ca488acbd26649acdc01ef898af2a98b
+      size: 8666568136
+    params:
+      params.yaml:
+        backgroundrate: 0.3
+        chunkdim: 200
+        chunksize: 3000
+        diffimagerate: 0.9
+        maxpc: 40
+    outs:
+    - path: MT020_2/pca/MT020_2-dpc-latent.csv
+      md5: 7de83295afb25c7af6d45e9d36b0766f
+      size: 10767632
+    - path: MT020_2/pca/MT020_2-dpc-latent.dat
+      md5: 4e9f93b1b6eed3b4a2c7067dc329b380
+      size: 5209245868
+  bodyparts@MT020_2:
+    cmd:
+    - julia -t auto --project=. src/reducevideo.jl bodyparts MT020_2
+    deps:
+    - path: MT020_2/pca/MT020_2a-10082021191715-0000-cropped-raw.dat
+      md5: 9974f9bea98211aa9ed89a13ddf71b07
+      size: 9549274136
+    - path: MT020_2/pca/MT020_2a-10082021193209-0000-cropped-raw.dat
+      md5: ca488acbd26649acdc01ef898af2a98b
+      size: 8666568136
+    params:
+      params.yaml:
+        bodypartboundaries.MT020_2:
+        - - 90
+          - 243
+          - 1161
+          - 1398
+        - - 244
+          - 381
+          - 977
+          - 1250
+        - - 44
+          - 164
+          - 965
+          - 1140
+        - - 80
+          - 381
+          - 414
+          - 909
+        - - 382
+          - 574
+          - 414
+          - 1300
+        - - 80
+          - 574
+          - 1
+          - 413
+        bodypartnames:
+        - nose
+        - mouth
+        - eye
+        - ear
+        - forepaw
+        - back
+    outs:
+    - path: MT020_2/pca/MT020_2-absolutemotion,bodyparts.csv
+      md5: df54f4085f5d1351ea0ae260910f7542
+      size: 2124128
+    - path: MT020_2/pca/MT020_2-bodyparts,back-motionenergy,levelstrials.csv
+      md5: 70155dfbe7cde3cefb2182b5b7e46ef2
+      size: 74945
+    - path: MT020_2/pca/MT020_2-bodyparts,ear-motionenergy,levelstrials.csv
+      md5: 85f0b7810a8ea2f9555935ff46f02693
+      size: 73361
+    - path: MT020_2/pca/MT020_2-bodyparts,eye-motionenergy,levelstrials.csv
+      md5: 7cc49b511ecd5564f45a9b09490f1395
+      size: 75391
+    - path: MT020_2/pca/MT020_2-bodyparts,forepaw-motionenergy,levelstrials.csv
+      md5: f339151ea7d4648dde61b75f9bfdcbf0
+      size: 75986
+    - path: MT020_2/pca/MT020_2-bodyparts,mouth-motionenergy,levelstrials.csv
+      md5: 9873de6d2c80da9d68ec2a42c4f0b314
+      size: 76386
+    - path: MT020_2/pca/MT020_2-bodyparts,nose-motionenergy,levelstrials.csv
+      md5: d8307d3f9b1566cd1f03605e3bdecd83
+      size: 78037
+    - path: MT020_2/pca/MT020_2-bodyparts,rois.png
+      md5: 2bb57fd395f66bc58ce9643874bf28ec
+      size: 121621
+    - path: MT020_2/pca/MT020_2-bodyparts-motionenergy,levels.csv
+      md5: ef77340811b4e63a35e663399a96ade1
+      size: 146

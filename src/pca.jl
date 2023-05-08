@@ -91,19 +91,21 @@ end
 
 
 
-function exportpctimeseries(Z,timestamps)
+function exportpctimeseries(Z,timestamps, fileid::String)
     println("exporting principal component projections...")
-    header = ["time" ["pc$i" for i in 1:size(Z,1)]... ]
+    header = ["time" ["$(fileid)$(i)" for i in 1:size(Z,1)]... ]
     @info "sizes" size(header) size(timestamps) size(Z')
     data = [ header; timestamps Z' ]
-    writedlm(outputpath*filename*"-pc-latent"*".csv",  data, ',')
+    writedlm(outputpath*filename*"-$(fileid)-latent"*".csv",  data, ',')
+
+
     # CSV()
 end
 
 
 
 
-function displaypctimeseries(Z,timestamps)
+function displaypctimeseries(Z,timestamps, fileid::String)
     println("exporting principal component projections...")
     
     n_timestamps = size(Z,2)
@@ -126,7 +128,7 @@ function displaypctimeseries(Z,timestamps)
 
         end
         display(ax)
-        savefig(ax, joinpath(outputpath,filename*"-pc-latent-$label.png"))
+        savefig(ax, joinpath(outputpath,filename*"-$(fileid)-latent-$label.png"))
     end
 
 end
@@ -154,19 +156,13 @@ end
 
 
 
-
-
-function threshold(Z,timestamps)
-    
-    _,z,s = calculateabsolutemotion(Z)
-
-
-    # calculate a per trial statistics as well
+function gettrialsframeindices(timestamps)
     trialsframeindices, events = gettrialboundaryframes(timestamps, paddingstart=-1.5, paddingend=1.5)
     @info "t" trialsframeindices
     # correct some frame inprecision
+    ntimecourse = 121
     trialwidths = trialsframeindices[!,:endframe]-trialsframeindices[!,:startframe]
-    @info "tneq" trialwidths[trialwidths.!=120] 
+    @info "tneq" trialwidths[trialwidths.!=ntimecourse-1] 
     @info "trialwidths pre correction" unique(trialwidths)
 
     trialsframeindices[trialwidths.==121,:endframe] .-= 1
@@ -176,17 +172,30 @@ function threshold(Z,timestamps)
     trialwidths = trialsframeindices[!,:endframe]-trialsframeindices[!,:startframe]
     @info "trialwidths post correction" unique(trialwidths)
 
+    ntrials = nrow(trialsframeindices)
+
+    return trialsframeindices, events, ntrials, ntimecourse
+end
+
+
+
+
+function threshold(fps,timestamps,Z,P,S,μ,σ,chunkZ,chunkP,chunkS,chunkμ,chunkσ,timechunks)
+    
+    _,z,s = calculateabsolutemotion(Z)
+
+
+    # calculate a per trial statistics as well
+    trialsframeindices, events, ntrials, ntimecourse = gettrialsframeindices(timestamps)
 
     # collect stats and heatmap data
-    ntrials = nrow(trialsframeindices)
-    @info "" ntrials
     pertrialstats = zeros(ntrials,2)
-    pertrialmotion = zeros(ntrials,121)
+    pertrialmotion = zeros(ntrials,ntimecourse)
     for i in 1:ntrials
         pertrialstats[i,:] = [mean(z), mean(s)]
         pertrialmotion[i,:] = z[trialsframeindices[i,:startframe]:trialsframeindices[i,:endframe]]
     end
-
+    @info "pertrial" size(pertrialmotion)
     
     # define display parameters    
     motionthresholddisplay = 0.4
@@ -197,31 +206,60 @@ function threshold(Z,timestamps)
     
     nmotionthresholds = length(motionthresholds)
     # first column: proportion value, rest motiontrials BitVector
-    motiontrials = zeros(length(proportiontrialmotionthresholds)*ntrials, 1+nmotionthresholds)
+    motionthresholdstrials = zeros(length(proportiontrialmotionthresholds)*ntrials, 1+nmotionthresholds)
+    
 
     # get threshold parameter grid triallists and pack them for export to csv
-    for (px,proportiontrialmotionthreshold) in enumerate(proportiontrialmotionthresholds)
-        for (mx,motionthreshold) in enumerate(motionthresholds)
+    for (mx,motionthreshold) in enumerate(motionthresholds)
+        for (px,proportiontrialmotionthreshold) in enumerate(proportiontrialmotionthresholds)
 
+            # stationarity
             # create per trial threshold mask
             movingtrial = dropdims(mean(pertrialmotion .>= motionthreshold,dims=2),dims=2) .> proportiontrialmotionthreshold
-
             # save current value to parameter grid
-            motiontrials[(px-1)*ntrials+1:px*ntrials,1] .= proportiontrialmotionthreshold
-            motiontrials[(px-1)*ntrials+1:px*ntrials,1+mx] = Float64.(movingtrial)
+            motionthresholdstrials[(px-1)*ntrials+1:px*ntrials,1] .= proportiontrialmotionthreshold
+            motionthresholdstrials[(px-1)*ntrials+1:px*ntrials,1+mx] = Float64.(movingtrial)
 
 
+
+
+            # store display variables
             if motionthreshold==motionthresholddisplay && proportiontrialmotionthreshold==proportiontrialmotionthresholddisplay
                 movingtrialdisplay = copy(movingtrial)
                 nmotiontrialsdisplay = sum(movingtrial)
                 # cross check if no funny businness is going on with the stationary trials
                 @info "characteristics of stationary trials" events[.!movingtrialdisplay,:]
             end
+
         end
+
+
     end
 
 
 
+    # get levels
+
+    motionlevels = [0.0; motionthresholds[1:end-1]; Inf]
+    # find the best bin edges that give equal numbers of trials in each bin
+
+    motionlevels = [0,collect(0.06:0.04:0.32)...,0.4,0.6,1.0,1.4,2,Inf]
+
+    nmotionlevels = length(motionlevels)-1      # number of motion levels, note range edges is +1
+    # first column: proportion value, rest motiontrials levels id
+    motionlevelstrials = zeros(ntrials,ntimecourse)
+
+    for mx in 1:nmotionlevels
+        # motion levels
+        # count per trial motion level id
+        movingleveltrialmask = motionlevels[mx] .<= pertrialmotion .<= motionlevels[mx+1]
+        # save current value to parameter grid
+        motionlevelstrials[movingleveltrialmask] .= mx
+    end
+
+    h = vcat([count(motionlevelstrials.==mx, dims=1) for mx in 1:nmotionlevels]...)
+    @info "moving levels" motionlevelstrials h sum(h,dims=2)
+    motionlevelsmidpoints = motionlevels[1:end-1] .+ diff(motionlevels)/2 # shift to centers of bins
 
 
 
@@ -229,7 +267,7 @@ function threshold(Z,timestamps)
 
 
 
-    excludelevel = -0.5   # this is the default color pallette code for trials not included in the given set of threshold combinations
+    excludelevel = -0.5   # this is the default color palette code for trials not included in the given set of threshold combinations
     pertrialmotionmoving = excludelevel .* ones(size(pertrialmotion))
     pertrialmotionstationary = excludelevel .* ones(size(pertrialmotion))
     pertrialmotionmoving[movingtrialdisplay,:] = pertrialmotion[movingtrialdisplay,:]
@@ -247,7 +285,7 @@ function threshold(Z,timestamps)
     clims = (excludelevel,2)
 
 
-    ax = plot(layout=(2,3),size=(3*500,2*400), top_margin=40Plots.px, bottom_margin=20Plots.px,
+    ax = plot(layout=(3,3),size=(3*500,3*400), top_margin=40Plots.px, bottom_margin=20Plots.px,
                                                left_margin=30Plots.px, right_margin=30Plots.px, legend=false )
     
 
@@ -303,78 +341,108 @@ function threshold(Z,timestamps)
     # plot!(axs, aspectratio = 0.25)
     
 
-    # go = [ events[1:ntrials÷2,:degree].==45; events[ntrials÷2+1:ntrials,:freq].==5000 ]
-    # success = .!events[!,:punish]
+    go = [ events[1:ntrials÷2,:degree].==45; events[ntrials÷2+1:ntrials,:freq].==5000 ]
+    success = .!events[!,:punish]
 
-    # for k in 1:3
-    #     indices = (1:ntrials)
-    #     # indices = (1:ntrials÷2, ntrials÷2+1:ntrials)[k]
+    for k in 1:3
+        indices = (1:ntrials)
+        # indices = (1:ntrials÷2, ntrials÷2+1:ntrials)[k]
         
-    #     lim = (150,80,80)[k]
-    #     N = (ntrials,ntrials÷2,ntrials÷2)[k]
-    #     axs = ax[3,k]
-    #     for (px,pr) in enumerate(proportiontrialmotionthresholds)
-    #         if k==1
-    #             for g in 1:2
-    #                 mask = (go, .!go)[g]
-    #                 golabel = ("go","nogo")[g]
-    #                 gocolor = (:black,:red)[g]
-    #                 N = sum(mask)
-    #                 Ns = 1 .-sum(motiontrials[(px-1)*ntrials+1:px*ntrials,2:end][indices[mask],:], dims=1)' ./N
-    #                 plot!(axs,  motionthresholds, Ns, label=["$golabel",nothing][Int(px>1)+1], color=gocolor,
-    #                             alpha=1 .-(px-1.)/length(proportiontrialmotionthresholds), ylims=[0,1])
-    #             end
-    #         elseif k==2
-    #             for s in 1:2
-    #                 mask = (success, .!success)[s]
-    #                 successlabel = ("correct","error")[s]
-    #                 successcolor = (:green,:darkorange)[s]
-    #                 N = sum(mask)
-    #                 Ns = 1 .-sum(motiontrials[(px-1)*ntrials+1:px*ntrials,2:end][indices[mask],:], dims=1)' ./N
-    #                 plot!(axs,  motionthresholds, Ns, label=["$successlabel",nothing][Int(px>1)+1], color=successcolor,
-    #                             alpha=1 .-(px-1.)/length(proportiontrialmotionthresholds), ylims=[0,1])
-    #             end
-    #         elseif k==3
-    #             for c in 1:2
-    #                 indices = (1:ntrials÷2, ntrials÷2+1:ntrials)[c]
-    #                 contextlabel = ["visual context", "audio context"][c]
-    #                 contextcolor = [:navy,:darkgreen][c]
-    #                 N = length(indices)
-    #                 Ns = 1 .-sum(motiontrials[(px-1)*ntrials+1:px*ntrials,2:end][indices,:], dims=1)' ./ N
-    #                 # plot!(axs,  motionthresholds, Ns, label="prop=$pr", ylims=[0,lim],
-    #                 #     xlabel="threshold [absolute motion]", ylabel="proportion of stationary trials")
-    #                 plot!(axs,  motionthresholds, Ns, label=["$contextlabel",nothing][Int(px>1)+1], color=contextcolor,
-    #                     alpha=1 .-(px-1.)/length(proportiontrialmotionthresholds), ylims=[0,1])
-    #             end
-    #         end
-    #         yticks!(axs,[0,0.5,1])
-    #         xlabel!(axs,"threshold [absolute motion]")
-    #         ylabel!(axs,"fraction of stationary trials")
-    #         hline!(axs,[1.],color=:grey, lw=0.5, ls=:dash, label=nothing)
-    #         plot!(axs, legend=:bottomright)
-    #     end
-    # end
-
-
-    panels="ABCDEFGHI"
-    for hx in 1:2
-        for wx in 1:3
-            if hx==2 && wx==3 continue end
-            axs = ax[hx,wx]
-            x1,x2 = xlims(axs)
-            y1,y2 = ylims(axs)
-            coords = [x2-x1,y2-y1] .* [-0.15,1.07] + [x1,y1]
-            annotate!(axs, coords..., panels[(hx-1)*3+wx], pointsize=26)
+        lim = (150,80,80)[k]
+        N = (ntrials,ntrials÷2,ntrials÷2)[k]
+        axs = ax[3,k]
+        for (px,pr) in enumerate(proportiontrialmotionthresholds)
+            if k==1
+                for g in 1:2
+                    mask = (go, .!go)[g]
+                    golabel = ("go","nogo")[g]
+                    gocolor = (:black,:red)[g]
+                    N = sum(mask)
+                    Ns = 1 .-sum(motionthresholdstrials[(px-1)*ntrials+1:px*ntrials,2:end][indices[mask],:], dims=1)' ./N
+                    plot!(axs,  motionthresholds, Ns, label=["$golabel",nothing][Int(px>1)+1],  lw=2, color=gocolor,
+                                alpha=1 .-(px-1.)/length(proportiontrialmotionthresholds), ylims=[0,1])
+                end
+            elseif k==2
+                for c in 1:2
+                    indices = (1:ntrials÷2, ntrials÷2+1:ntrials)[c]
+                    contextlabel = ["visual context", "audio context"][c]
+                    contextcolor = [:navy,:darkgreen][c]
+                    N = length(indices)
+                    Ns = 1 .-sum(motionthresholdstrials[(px-1)*ntrials+1:px*ntrials,2:end][indices,:], dims=1)' ./ N
+                    # plot!(axs,  motionthresholds, Ns, label="prop=$pr", ylims=[0,lim],
+                    #     xlabel="threshold [absolute motion]", ylabel="proportion of stationary trials")
+                    plot!(axs,  motionthresholds, Ns, label=["$contextlabel",nothing][Int(px>1)+1],  lw=2, color=contextcolor,
+                        alpha=1 .-(px-1.)/length(proportiontrialmotionthresholds), ylims=[0,1])
+                end
+            elseif k==3
+                continue
+                # for s in 1:2
+                #     mask = (success, .!success)[s]
+                #     successlabel = ("correct","error")[s]
+                #     successcolor = (:green,:darkorange)[s]
+                #     N = sum(mask)
+                #     Ns = 1 .-sum(motionthresholdstrials[(px-1)*ntrials+1:px*ntrials,2:end][indices[mask],:], dims=1)' ./N
+                #     plot!(axs,  motionthresholds, Ns, label=["$successlabel",nothing][Int(px>1)+1], lw=2, color=successcolor,
+                #                 alpha=1 .-(px-1.)/length(proportiontrialmotionthresholds), ylims=[0,1])
+                # end
+            end
+            yticks!(axs,[0,0.5,1])
+            xlabel!(axs,"threshold [absolute motion]")
+            ylabel!(axs,"fraction of stationary trials")
+            hline!(axs,[1.],color=:grey, lw=0.5, ls=:dash, label=nothing)
+            plot!(axs, legend=:bottomright)
         end
     end
 
-    display(ax)
-    # savefig(ax, joinpath(outputpath,filename*"-pc-latent-motionenergy,threshold.png"))
-    savefig(ax, "Supp7-absolutemotion,threshold,proportionallowed.png")
 
-    data = [ ["proportion" motionthresholds']; motiontrials ]
-    # @info "data" data
-    # writedlm(outputpath*filename*"-pc-latent-motionenergy,threshold"*".csv",  data, ',')
+    # show filters
+    axs = ax[3,3]
+    filternumbers = [1,2,3,5,12,13] # choose these filters
+    Wm = getweights(P, S, chunkP, chunkS, timechunks)[filternumbers]     # use only the main pc Wms but not the residuals
+    # Wm = [ Wm[1] Wm[2]; Wm[3] Wm[4]; Wm[5] Wm[6] ]
+    b1 = 0.5.*ones(height,width÷6)
+    b2 = 0.5.*ones(width÷6,2*width+3*width÷6)
+    Wm = [ b2;
+           b1 Wm[1] b1 Wm[2] b1;
+           b2;
+           b1 Wm[3] b1 Wm[4] b1;
+           b2;
+           b1 Wm[5] b1 Wm[6] b1;
+           b2 ]
+    
+    Wm = RGB.(Wm)
+    convertcolortoredgreen!(Wm,axes(Wm))
+
+    plot!(axs,Wm, showaxis=false)
+
+
+    panels="ABCDEFGH"
+    ix = 0
+    for hx in 1:3
+        for wx in 1:3
+            if hx==2 && wx==3 continue end
+            ix += 1
+            axs = ax[hx,wx]
+            x1,x2 = xlims(axs)
+            y1,y2 = ylims(axs)
+            if hx+wx==6 y2,y1 = ylims(axs) end
+            coords = [x2-x1,y2-y1] .* [-0.2,1.07] + [x1,y1]
+            annotate!(axs, coords..., text(panels[ix], "Helvetica Bold", pointsize=26))
+        end
+    end
+
+    # display(ax)
+    # savefig(ax, joinpath(outputpath,filename*"-pc-latent-motionenergy,threshold.png"))
+    # savefig(ax, joinpath("../../publish/journals/journal2020spring/figures/","Supp7-absolutemotion,threshold,proportionallowed,filters.png"))
+
+    # datathresholds = [ ["proportion" motionthresholds']; motionthresholdstrials ]
+    # @info "thresholds" datathresholds
+    # writedlm(outputpath*filename*"-dpc-latent-motionenergy,threshold"*".csv",  datathresholds, ',')
+
+    # write levels
+    # @info "levels" motionlevelsmidpoints motionlevelstrials
+    # writedlm(outputpath*filename*"-dpc-latent-motionenergy,levels"*".csv",  motionlevelsmidpoints, ',')
+    # writedlm(outputpath*filename*"-dpc-latent-motionenergy,levelstrials"*".csv",  motionlevelstrials, ',')
 
 
     return z,movingtrialdisplay

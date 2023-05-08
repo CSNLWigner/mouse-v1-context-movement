@@ -33,6 +33,24 @@ stages:
 
 
 
+  dpca:
+    foreach: ${sessions}
+    do:
+      cmd: julia -t auto --project=. src/reducevideo.jl dpca ${key}
+      deps:
+        - ${key}/pca/${item.videos[0]}-cropped-raw.dat
+        - ${key}/pca/${item.videos[1]}-cropped-raw.dat
+      params:
+        - maxpc
+        - chunksize
+        - chunkdim
+        - backgroundrate
+        - diffimagerate
+      outs:
+        - ${key}/pca/${key}-dpc-latent.dat: {persist: true}
+        - ${key}/pca/${key}-dpc-latent.csv: {persist: true}
+
+
 
 
 
@@ -42,9 +60,12 @@ stages:
       cmd: julia -t auto --project=. src/reducevideo.jl display ${key}
       deps:
         - ${key}/pca/${key}-pc-latent.dat
+        - ${key}/pca/${key}-dpc-latent.dat
       outs:
         - ${key}/pca/${key}-pc-latent-short.png: {persist: true}
         - ${key}/pca/${key}-pc-latent-long.png: {persist: true}
+        - ${key}/pca/${key}-dpc-latent-short.png: {persist: true}
+        - ${key}/pca/${key}-dpc-latent-long.png: {persist: true}
 
 
 
@@ -57,18 +78,40 @@ stages:
         - cp ${key}/pca/${key}-pc-latent-motionenergy,threshold.csv ${rawbehaviourrootpath}/${key}/${key}-motionenergy,threshold.csv
         - chmod u+w ${rawbehaviourrootpath}/${key}/${key}-motionenergy,threshold.csv
       deps:
-        - ${key}/pca/${key}-pc-latent.dat
+        - ${key}/pca/${key}-dpc-latent.dat
       params:
         - kernelhalfwidth
         - motionthresholds
         - proportiontrialmotionthresholds
       outs:
-        - ${key}/pca/${key}-pc-latent-motionenergy,threshold.csv: {persist: true}
-        - ${key}/pca/${key}-pc-latent-motionenergy,threshold.png: {persist: true}
+        - ${key}/pca/${key}-dpc-latent-motionenergy,threshold.csv: {persist: true}
+        - ${key}/pca/${key}-dpc-latent-motionenergy,threshold.png: {persist: true}
         - ${key}/pca/${key}-motionenergy,threshold-view.avi: {persist: true}
+        - ${key}/pca/${key}-dpc-latent-motionenergy,levels.csv: {persist: true}
+        - ${key}/pca/${key}-dpc-latent-motionenergy,levelstrials.csv: {persist: true}
 
 
-
+  bodyparts:
+    foreach: ${sessions}
+    do:
+      cmd:
+        - julia -t auto --project=. src/reducevideo.jl bodyparts ${key}
+      deps:
+        - ${key}/pca/${item.videos[0]}-cropped-raw.dat
+        - ${key}/pca/${item.videos[1]}-cropped-raw.dat
+      params:
+        - bodypartnames
+        - bodypartboundaries.${key}
+      outs:
+        - ${key}/pca/${key}-bodyparts,rois.png: {persist: true}
+        - ${key}/pca/${key}-absolutemotion,bodyparts.csv: {persist: true}
+        - ${key}/pca/${key}-bodyparts-motionenergy,levels.csv: {persist: true}
+        - ${key}/pca/${key}-bodyparts,nose-motionenergy,levelstrials.csv: {persist: true}
+        - ${key}/pca/${key}-bodyparts,mouth-motionenergy,levelstrials.csv: {persist: true}
+        - ${key}/pca/${key}-bodyparts,eye-motionenergy,levelstrials.csv: {persist: true}
+        - ${key}/pca/${key}-bodyparts,ear-motionenergy,levelstrials.csv: {persist: true}
+        - ${key}/pca/${key}-bodyparts,forepaw-motionenergy,levelstrials.csv: {persist: true}
+        - ${key}/pca/${key}-bodyparts,back-motionenergy,levelstrials.csv: {persist: true}
 
 
 
@@ -79,7 +122,7 @@ stages:
       deps:
         - ${key}/pca/${item.videos[0]}-cropped-raw.dat
         - ${key}/pca/${item.videos[1]}-cropped-raw.dat
-        - ${key}/pca/${key}-pc-latent.dat
+        - ${key}/pca/${key}-dpc-latent.dat
       params:
         - maxpc
         - reconstructpc
@@ -91,9 +134,8 @@ stages:
         - exportframestart
         - exportframeduration
       outs:
-        - ${key}/pca/${key}-pc-reconstruction.avi: {persist: true}
-
-
+        - ${key}/pca/${key}-dpc-reconstruction.avi: {persist: true}
+        - ${key}/pca/${key}-reconstructionframes-dpcs.csv: {persist: true}
 
 
 

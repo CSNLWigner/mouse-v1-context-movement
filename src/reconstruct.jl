@@ -78,7 +78,7 @@ function reconstructframefrompcs(Z, P, μ, σ, chunkP, chunkμ, chunkσ, timechu
                 end
             end
         else      # in case there is no multiple chunks, only the inner PCA is needed
-            dx̂ = dropdims(broadcast(+,   broadcast(*, P[:,pc]*Z[pc,i], σ),   μ)[:,1],dims=2)
+            dx̂ = dropdims(broadcast(+,   broadcast(*,  [:,pc]*Z[pc,i], σ),   μ)[:,1],dims=2)
         end
 
         push!(dx̂s, dx̂)
@@ -119,14 +119,17 @@ function reconstruct(X,Z,P,S,μ,σ,chunkZ,chunkP,chunkS,chunkμ,chunkσ,timechun
     # display(plot(layout=(2,3),[histogram(cP[:]) for cP in chunkP]))
     
     # select exporting frames, videoindices must be contiguous due to the differential-cumulative operation
-    exportvideoframeindices = exportframestart:exportframestart+exportframeduration-1
+    # exportvideoframeindices = exportframestart:exportframestart+exportframeduration-1
     # exportvideoframeindices = 9501:9500+4800
+    # exportvideoframeindices = 6848+8-100:6848+13      # a paw movement
+    exportvideoframeindices = 14301:14300+40
     # exportvideoframeindices = 1:10
 
     exportimageframeindices = []
     # exportimageframeindices = exportframestart:exportframestart+exportframeduration-1
-    exportimageframeindices = 6848+8:6848+13      # a paw movement
+    # exportimageframeindices = 6848+8-100:6848+13      # a paw movement
     # exportimageframeindices = [18,19,20,98,99,100,198,199,200,298,299,300]
+    exportimageframeindices = 14331:14336
     # exportimageframeindices = 1:10#16:20
 
     
@@ -231,12 +234,12 @@ function reconstruct(X,Z,P,S,μ,σ,chunkZ,chunkP,chunkS,chunkμ,chunkσ,timechun
         # standardizevideo!.(cx̂s, shift=0.2f0, σ=6f0)
 
         # make the differential visible (individual and pc-cumulative)
-        print("dx")
+        # print("dx")
         standardizevideo!(dx, shift=0.5f0, σ=2f0, absolute=true, shows=false)
 
-        print("dx̂s")
+        # print("dx̂s")
         standardizevideo!.(dx̂s, shift=0.5f0, σ=10f0, absolute=true, shows=false)
-        print("cdx̂s")
+        # print("cdx̂s")
         standardizevideo!.(cdx̂s, shift=0.5f0, σ=3f0, absolute=true, shows=false)
         # make the time-cumulative reconstruction visible (individual and pc-cumulative)
         standardizevideo!.(x̂s, shift=0.2f0, σ=6f0)
@@ -317,17 +320,24 @@ function reconstruct(X,Z,P,S,μ,σ,chunkZ,chunkP,chunkS,chunkμ,chunkσ,timechun
 
         # export still image for selected frames
         if i in exportimageframeindices
-            # ax = plot(eframe,size=(4*reconstructpc*200,4*(6*200+200÷5)))
-            # display(ax)
-            # if writeimage
-            #     savefig(ax, joinpath(outputpath,"reconstructionframes",filename*"-pc-reconstruction-f$(lpad(i,5,'0')).png"))
-            # end
-            iframe = [ frame[1:height, 1:1*width];; frame[1:height, 1*width+1:2*width];; frame[1:height, 5*width+1:6*width] ]
-            ax = plot(iframe,size=(width*3,height))
-            display(ax)
             if writeimage
-                # savefig(ax, joinpath(outputpath,"reconstructionframes",filename*"-pc-reconstruction-small-f$(lpad(i,5,'0')).png"))
-                save(joinpath(outputpath,"reconstructionframes",filename*"-pc-reconstruction-small-f$(lpad(i,5,'0')).png"), iframe)
+                # ax = plot(eframe,size=(4*reconstructpc*200,4*(6*200+200÷5)))
+                # display(ax)
+                # if writeimage
+                #     savefig(ax, joinpath(outputpath,"reconstructionframes",filename*"-pc-reconstruction-f$(lpad(i,5,'0')).png"))
+                # end
+                    
+                if exportframeorientation=="horizontal"             # horizontal concatenation of the individual frames
+                    iframe = [ frame[1:height, 1:1*width];; frame[1:height, 1*width+1:2*width];;
+                                frame[1:height, 5*width+1:6*width];; frame[1:height, (ndisplaycolumns-1)*width+1:ndisplaycolumns*width] ]
+                    ax = plot(iframe,size=(width*4,height))
+                elseif exportframeorientation=="vertical"           # vertical concatenation of the individual frames
+                    iframe = [ frame[1:height, 1:1*width]; frame[1:height, 1*width+1:2*width];
+                                frame[1:height, 5*width+1:6*width]; frame[1:height, (ndisplaycolumns-1)*width+1:ndisplaycolumns*width] ]
+                    ax = plot(iframe,size=(width,height*4))
+                end
+                display(ax)
+                # save(joinpath(outputpath,"reconstructionframes",filename*"-dpc-reconstruction-small-f$(lpad(i,5,'0')).png"), iframe)
 
             end
         end
@@ -336,7 +346,9 @@ function reconstruct(X,Z,P,S,μ,σ,chunkZ,chunkP,chunkS,chunkμ,chunkσ,timechun
 
     end
     println()
-
+    if ! isempty(exportimageframeindices)
+        writedlm(joinpath(outputpath,filename*"-reconstructionframes-dpcs"*".csv"), Z[:,exportimageframeindices]', ',')
+    end
 
     # close the video stream
     if writevideo

@@ -233,3 +233,46 @@ function convertcolortoredgreen!(frame,sub)
 
     frame[sub...] = colorview(RGB,L)
 end
+
+
+
+
+function convolve(x::Vector{Float64},v::Vector{Float64}; mode=:same)
+    nx = length(x)
+    nvh = length(v)÷2
+    xp = zeros(nx+2*nvh) # zeropadding pre and post domain of x
+    xp[nvh:nvh+nx-1] = copy(x)    # avoiding modifying function argument
+    cp = [ xp[t-nvh:t+nvh]'*v for t in nvh+1:nvh+nx ]
+    if mode==:same
+        return cp
+    else
+        error("Convolution mode: $(mode) not implemented")
+    end
+end
+
+
+
+
+
+# image morphology utilities
+
+
+function erode1d!(h)
+    x = copy(h)
+    h[1] = minimum([x[1],x[1+1]])
+    for i in 2:length(x)-1
+        h[i] = minimum([x[i-1],x[i],x[i+1]])
+    end
+    h[end] = minimum([x[end-1],x[end]])
+end
+
+function dilate1d!(h)
+    x = copy(h)
+    h[1] = minimum([x[1],x[1+1]])
+    for i in 2:length(x)-1
+        h[i] = maximum([x[i-1],x[i],x[i+1]])
+    end
+    h[end] = minimum([x[end-1],x[end]])
+end
+
+

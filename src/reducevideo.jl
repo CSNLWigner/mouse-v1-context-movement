@@ -27,7 +27,7 @@ using Optim
 
 using Plots
 # import NeuroscienceCommon.Figs.__init__
-using NeuroscienceCommon.MathUtils: convolve, erode1d!, dilate1d!
+# using NeuroscienceCommon.MathUtils: convolve, erode1d!, dilate1d!
 
 
 
@@ -46,7 +46,7 @@ if command=="cachecodec"
     crop = video[:crop]
     framestart = video[:framestart]           #  # 4776         multimodal start
     frameduration = video[:frameduration]   #6000 # 9450                      #14226-framestart # 14221 (last multimodal trial in video)
-elseif command in ["pca", "exportpca", "display", "threshold", "reconstruct"]
+elseif command in ["pca", "dpca", "display", "threshold", "reconstruct", "bodyparts"]
     session = config[:sessions][Symbol(mouseid)]
     videos = config[:videos]
     filename = mouseid
@@ -65,7 +65,7 @@ rawbehaviourrootpath = config[:rawbehaviourrootpath]
 ext = config[:videofileextension]
 inputpath = joinpath(rawvideorootpath, mouseid*"/")
 outputpath = joinpath(rawvideorootpath, mouseid*"/pca/")
-@info "config" filename inputpath eventpostfix
+@info "config" filename inputpath outputpath
 
 # crop = parse.(Int64,args[3:3+4-1])            # [960, 1536, 200, 600]
 chunksize = config[:chunksize]
@@ -88,8 +88,11 @@ diffimagerate = Float32(config[:diffimagerate])
 kernelhalfwidth = config[:kernelhalfwidth]
 motionthresholds = config[:motionthresholds]
 proportiontrialmotionthresholds = config[:proportiontrialmotionthresholds]
+exportframeorientation = config[:exportframeorientation]
 exportoverlayframe = config[:exportoverlayframe]
 
+bodypartnames = config[:bodypartnames]
+bodypartboundaries = config[:bodypartboundaries][Symbol(mouseid)]
 
 # first-order trial start-end impulse response
 # const impulseresponsehalfwidth = 5
@@ -109,6 +112,7 @@ include("utils.jl")
 include("annotation.jl")
 include("pca.jl")
 include("reconstruct.jl")
+include("bodyparts.jl")
 
 
 
@@ -130,20 +134,38 @@ function main()
 
 
 
-    elseif command=="pca"
+    elseif command=="pca"        # absolute intensity
+
 
         fps,timestamps,X = concatenateblocks()
 
         if true         # quick cacheing (use false here 2nd time) outside dvc
-            # smoothglobalillumination!(X, fps)
-            smoothbaselinedifference!(X)
             Z,P,S,μ,σ,chunkZ,chunkP,chunkS,chunkμ,chunkσ,timechunks = pcatransform(X)
             serialize(joinpath(outputpath,filename*"-pc-latent"*".dat"),(fps,timestamps,Z,P,S,μ,σ,chunkZ,chunkP,chunkS,chunkμ,chunkσ,timechunks))
+            
         else
             (fps,timestamps,Z,P,S,μ,σ,chunkZ,chunkP,chunkS,chunkμ,chunkσ,timechunks) = deserialize(joinpath(outputpath,filename*"-pc-latent"*".dat"))
         end
 
-        exportpctimeseries(Z,timestamps)
+        exportpctimeseries(Z,timestamps,"pc")
+
+
+
+
+               
+    elseif command=="dpca"          # differential intensity
+
+        fps,timestamps,X = concatenateblocks()
+
+        if true         # quick cacheing (use false here 2nd time) outside dvc
+            smoothbaselinedifference!(X)
+            dZ,dP,dS,dμ,dσ,dchunkZ,dchunkP,dchunkS,dchunkμ,dchunkσ,dtimechunks = pcatransform(X)
+            serialize(joinpath(outputpath,filename*"-dpc-latent"*".dat"),(fps,timestamps,dZ,dP,dS,dμ,dσ,dchunkZ,dchunkP,dchunkS,dchunkμ,dchunkσ,dtimechunks))
+        else
+            (fps,timestamps,dZ,dP,dS,dμ,dσ,dchunkZ,dchunkP,dchunkS,dchunkμ,dchunkσ,dtimechunks) = deserialize(joinpath(outputpath,filename*"-dpc-latent"*".dat"))
+        end
+
+        exportpctimeseries(dZ,timestamps,"dpc")
 
 
 
@@ -151,37 +173,51 @@ function main()
     elseif command=="display"
 
         fps,timestamps,Z,P,S,μ,σ,chunkZ,chunkP,chunkS,chunkμ,chunkσ,timechunks = deserialize(joinpath(outputpath,filename*"-pc-latent"*".dat"))
+        fps,timestamps,dZ,dP,dS,dμ,dσ,dchunkZ,dchunkP,dchunkS,dchunkμ,dchunkσ,dtimechunks = deserialize(joinpath(outputpath,filename*"-dpc-latent"*".dat"))
 
-        displaypctimeseries(Z,timestamps)
+        displaypctimeseries(Z,timestamps,"pc")
+        displaypctimeseries(dZ,timestamps,"dpc")
 
 
 
 
     elseif command=="threshold"
 
-        fps,timestamps,Z,P,S,μ,σ,chunkZ,chunkP,chunkS,chunkμ,chunkσ,timechunks = deserialize(joinpath(outputpath,filename*"-pc-latent"*".dat"))
+        fps,timestamps,Z,P,S,μ,σ,chunkZ,chunkP,chunkS,chunkμ,chunkσ,timechunks = deserialize(joinpath(outputpath,filename*"-dpc-latent"*".dat"))
 
         fa = annotateframes(timestamps)
         # diagnosetrialboundaries(timestamps, fa); return
 
-        z,movingtrial = threshold(Z,timestamps)
+        z,movingtrial = threshold(fps,timestamps,Z,P,S,μ,σ,chunkZ,chunkP,chunkS,chunkμ,chunkσ,timechunks)
 
-        fps,timestamps,X = concatenateblocks()
-        fa = annotateframes(timestamps)
+        # fps,timestamps,X = concatenateblocks()
+        # fa = annotateframes(timestamps)
 
-        viewstationarytrials(X, movingtrial, timestamps, fps, fa)
+        # viewstationarytrials(X, movingtrial, timestamps, fps, fa)
 
 
 
     elseif command=="reconstruct"
 
-        fps,timestamps,Z,P,S,μ,σ,chunkZ,chunkP,chunkS,chunkμ,chunkσ,timechunks = deserialize(joinpath(outputpath,filename*"-pc-latent"*".dat"))
+        fps,timestamps,Z,P,S,μ,σ,chunkZ,chunkP,chunkS,chunkμ,chunkσ,timechunks = deserialize(joinpath(outputpath,filename*"-dpc-latent"*".dat"))
         fps,timestamps,X = concatenateblocks()
         fa = annotateframes(timestamps)
 
         reconstruct(X,Z,P,S,μ,σ,chunkZ,chunkP,chunkS,chunkμ,chunkσ,timechunks,fps,fa)
 
 
+    elseif command=="bodyparts"
+        
+        if true           # on run non-dvc-cache
+            fps,timestamps,X = concatenateblocks()
+            exampleframe = copy(X[:,14333])
+            smoothbaselinedifference!(X)
+            serialize(joinpath(outputpath,filename*"-diff-frames"*".dat"),(fps,timestamps,X,exampleframe))
+        else
+            (fps,timestamps,X,exampleframe) = deserialize(joinpath(outputpath,filename*"-diff-frames"*".dat"))
+        end
+        
+        movementrepertoire(X,exampleframe,timestamps)
     
     end
 
