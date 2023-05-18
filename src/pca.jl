@@ -431,9 +431,10 @@ function threshold(fps,timestamps,Z,P,S,μ,σ,chunkZ,chunkP,chunkS,chunkμ,chunk
         end
     end
 
-    # display(ax)
+    display(ax)
     # savefig(ax, joinpath(outputpath,filename*"-pc-latent-motionenergy,threshold.png"))
     # savefig(ax, joinpath("../../publish/journals/journal2020spring/figures/","Supp7-absolutemotion,threshold,proportionallowed,filters.png"))
+    # savefig(ax, joinpath("../../publish/journals/journal2020spring/figures/","Supp7-absolutemotion,threshold,proportionallowed,filters.pdf"))
 
     # datathresholds = [ ["proportion" motionthresholds']; motionthresholdstrials ]
     # @info "thresholds" datathresholds
