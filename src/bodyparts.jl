@@ -22,11 +22,11 @@ function movementrepertoire(pixelflow::Matrix{Gray{N0f8}}, exampleframe::Vector{
     x1,x2 = xlims(ax)
     y2,y1 = ylims(ax)
     coords = [x2-x1,y2-y1] .* [-0.0,0.95] + [x1,y1]
-    annotate!(ax, coords..., text('A', "Helvetica Bold", pointsize=20))
+    annotate!(ax, coords..., text('a', "Helvetica Bold", pointsize=20))
     display(ax)
-    savefig(ax, joinpath(outputpath, filename*"-bodyparts,rois.png"))
-    savefig(ax, joinpath("../../publish/journals/journal2020spring/figures/","Supp8A_bodyparts,rois.png"))
-    # savefig(ax, joinpath("../../publish/journals/journal2020spring/figures/","Supp8A_bodyparts,rois.pdf"))
+    # savefig(ax, joinpath(outputpath, filename*"-bodyparts,rois.png"))
+    savefig(ax, joinpath("../../publish/journals/journal2020spring/figures/","Supp8a_bodyparts,rois.png"))
+    savefig(ax, joinpath("../../publish/journals/journal2020spring/figures/","Supp8a_bodyparts,rois.pdf"))
     
     return
 
